@@ -42,7 +42,7 @@ router.post("/register", async (req, res) => {
 
 router.post("/verify-otp", async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { email, otp, location, age, work } = req.body;
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -74,13 +74,20 @@ router.post("/verify-otp", async (req, res) => {
         .status(400)
         .json({ error: "OTP expired, a new OTP has been sent to your email" });
     }
+    if (user.is_verified) {
+      return res.status(200).json({ message: "User already verified" });
+    }
 
     user.is_verified = true;
+    user.location = location;
+    user.age = age;
+    user.work = work;
+    user.updatedAt = new Date();
     await user.save();
 
     await OTP.deleteOne({ _id: otpDocument._id });
 
-    res.status(200).json({ message: "User verified!" });
+    res.status(200).json({ message: "User verified and updated" });
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }
