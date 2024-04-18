@@ -20,11 +20,10 @@ async function sendOTPEmail(email, otp) {
       subject: "OTP for Account Verification",
       html: `<p>OTP to verify your account is ${otp}</p>`,
     });
-    console.log("OTP sent successfully");
   } catch (error) {
     console.error("Error sending OTP:", error);
     throw new Error("Failed to send OTP");
   }
 }
 
-module.exports = {sendOTPEmail}
+module.exports = { sendOTPEmail };

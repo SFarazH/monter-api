@@ -11,9 +11,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  otp: {
-    type: Number,
-    required: true,
+  is_verified: {
+    type: Boolean,
+    default: false,
   },
   location: {
     type: String,
