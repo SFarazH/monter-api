@@ -14,7 +14,7 @@ const register = async (req, res) => {
       return res.status(400).json({ error: "Please enter email and password" });
     }
 
-    if(typeof password != String){
+    if(typeof password != "string"){
       return res.status(400).json({ error: "Please enter password as a string" });
     }
 
@@ -79,7 +79,7 @@ const verify = async (req, res) => {
     }
 
     // check if OTP has timed out (5 minutes)
-    if (otpDocument.expiresAt < new Date()) {
+    if (otpDocument.expiration < new Date()) {
       await OTP.deleteOne({ _id: otpDocument._id });
 
       const newOtp = otpGenerator.generate(6, {
