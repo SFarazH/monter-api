@@ -1,4 +1,4 @@
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const User = require("../db/UserModel");
 const OTP = require("../db/otpModel");
 const { sendOTPEmail } = require("../utils/email");
@@ -9,6 +9,11 @@ const register = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // check if request body sent
+    if (!otp || !email) {
+      return res.status(400).json({ error: "Please enter email and password" });
+    }
+    
     // check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -42,6 +47,7 @@ const register = async (req, res) => {
         "User registered successfully. Please verify using OTP sent on mail",
     });
   } catch (error) {
+    console.log(error)
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -51,8 +57,8 @@ const verify = async (req, res) => {
     const { email, otp } = req.body;
 
     // check OTP in request body
-    if (!otp) {
-      return res.status(400).json({ error: "Please enter OTP" });
+    if (!otp || !email) {
+      return res.status(400).json({ error: "Please enter OTP and email" });
     }
 
     const user = await User.findOne({ email });

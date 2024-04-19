@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const dbConnect = require("./db/dbConnect");
 const userRoutes = require("./routes/user");
+const serverless = require("serverless-http")
 
 app.use(express.json());
 
@@ -27,3 +28,4 @@ app.use("/users", userRoutes);
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+module.exports.handler = serverless(app);
