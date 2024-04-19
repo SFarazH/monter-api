@@ -14,6 +14,10 @@ const register = async (req, res) => {
       return res.status(400).json({ error: "Please enter email and password" });
     }
 
+    if(typeof password != String){
+      return res.status(400).json({ error: "Please enter password as a string" });
+    }
+
     // check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
