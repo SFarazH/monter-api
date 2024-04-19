@@ -10,10 +10,10 @@ const register = async (req, res) => {
     const { email, password } = req.body;
 
     // check if request body sent
-    if (!otp || !email) {
+    if (!password || !email) {
       return res.status(400).json({ error: "Please enter email and password" });
     }
-    
+
     // check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
