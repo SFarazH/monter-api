@@ -5,6 +5,7 @@ const User = require("../db/UserModel");
 const OTP = require("../db/otpModel");
 const { sendOTPEmail } = require("../utils/email");
 const otpGenerator = require("otp-generator");
+const jwt = require("jsonwebtoken")
 
 router.post("/register", async (req, res) => {
   try {
@@ -43,6 +44,12 @@ router.post("/register", async (req, res) => {
 router.post("/verify-otp", async (req, res) => {
   try {
     const { email, otp, location, age, work } = req.body;
+    if (!otp) {
+      res.status(500).json({ error: "Please enter OTP" });
+    }
+    if (!location || !age || !work) {
+      res.status(500).json({ error: "Please enter additional user detailss" });
+    }
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -90,6 +97,30 @@ router.post("/verify-otp", async (req, res) => {
     res.status(200).json({ message: "User verified and updated" });
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+  
+    if (!passwordMatch) {
+      return res.status(401).json({ message: "Incorrect password" });
+    }
+    const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
+      expiresIn: "1 hour",
+    });
+    res.json({ token });
+  } catch (error) {
+    // console.error("Error:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
