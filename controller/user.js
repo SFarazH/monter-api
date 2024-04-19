@@ -9,6 +9,7 @@ const register = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ error: "User already exists" });
@@ -20,8 +21,9 @@ const register = async (req, res) => {
       specialChars: false,
       lowerCaseAlphabets: false,
     });
-
     const user = new User({ email, password: hashedPassword });
+
+    // save user
     await user.save();
 
     const otpDocument = new OTP({
@@ -29,36 +31,44 @@ const register = async (req, res) => {
       otp,
       createdAt: new Date(),
     });
+    // save OTP document containing OTP and userId of the created user.
     await otpDocument.save();
 
+    // send email to user with OTP
     await sendOTPEmail(email, otp);
 
-    res.status(201).json({ message: "User registered successfully" });
+    res.status(201).json({
+      message:
+        "User registered successfully. Please verify using OTP sent on mail",
+    });
   } catch (error) {
-    res.status(500).json({ error: error });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
 const verify = async (req, res) => {
   try {
     const { email, otp } = req.body;
+
+    // check OTP in request body
     if (!otp) {
-      res.status(500).json({ error: "Please enter OTP" });
-    }
-    // if (!location || !age || !work) {
-    //   res.status(500).json({ error: "Please enter additional user detailss" });
-    // }
-    const user = await User.findOne({ email });
-    if (!user) {
-      res.status(404).json({ error: "User not found" });
+      return res.status(400).json({ error: "Please enter OTP" });
     }
 
+    const user = await User.findOne({ email });
+
+    // check if user exists
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
     const otpDocument = await OTP.findOne({ userId: user._id, otp });
 
+    // check if OTP exists
     if (!otpDocument) {
-      res.status(400).json({ error: "Invalid OTP" });
+      return res.status(400).json({ error: "Invalid OTP" });
     }
 
+    // check if OTP has timed out (5 minutes)
     if (otpDocument.expiresAt < new Date()) {
       await OTP.deleteOne({ _id: otpDocument._id });
 
@@ -73,46 +83,54 @@ const verify = async (req, res) => {
         otp: newOtp,
         createdAt: new Date(),
       });
+      // if OTP has timed out, create and save new OTP and send new email
       await newOtpDocument.save();
-
       await sendOTPEmail(email, newOtp);
-      res
+      return res
         .status(400)
         .json({ error: "OTP expired, a new OTP has been sent to your email" });
     }
 
     if (user.is_verified) {
-      res.status(200).json({ message: "User already verified." });
+      return res.status(200).json({ message: "User already verified." });
     }
 
+    // update is_verified status of the user
     user.is_verified = true;
-    // user.location = location;
-    // user.age = age;
-    // user.work = work;
     user.updatedAt = new Date();
     await user.save();
 
+    // delete the OTP document of current user after verification
     await OTP.deleteOne({ _id: otpDocument._id });
 
+    // generate JWT Token AFTER succcessful verification (for updating data)
     const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
       expiresIn: "1 hour",
     });
-    res.status(200).json({ token: token, message: "User has been verified!" });
 
-    // res.status(200).json({ message: "User verified and updated" });
+    res.status(200).json({ token: token, message: "User has been verified!" });
   } catch (error) {
-    console.log(error);
+    // console.log(error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
 
 const update = async (req, res) => {
   const { location, age, work } = req.body;
+
   try {
-    const user = req.user;
-    if (!user.is_verified) {
-      res.status(400).json({ error: "User is not verified" });
+    // check if all required fields sent in request body
+    if (!location || !age || !work) {
+      return res.status(500).json({ error: "Please enter all the details" });
     }
+    const user = req.user;
+
+    // check if user is verified or not
+    if (!user.is_verified) {
+      return res.status(400).json({ error: "User is not verified" });
+    }
+
+    // update the details of the user
     user.location = location;
     user.age = age;
     user.work = work;
@@ -121,7 +139,6 @@ const update = async (req, res) => {
     await user.save();
     res.status(200).json({ message: "User data updated successfully" });
   } catch (error) {
-    console.error("Error updating user data:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -130,23 +147,36 @@ const login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    // check if email and password sent in request body
+    if (!email || !password) {
+      return res
+        .status(500)
+        .json({ error: "Please enter email and password to login" });
+    }
+
     const user = await User.findOne({ email });
+
+    // check if user exists
     if (!user) {
-      res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "User not found" });
     }
 
+    // check if user is verified
     if (!user.is_verified) {
-      res.status(401).json({ message: "User is not verified" });
+      return res.status(401).json({ message: "User is not verified" });
     }
 
+    // check if password is correct
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
-      res.status(401).json({ message: "Incorrect password" });
+      return res.status(401).json({ message: "Incorrect password" });
     }
+
+    // generate JWT Token after successful login
     const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
       expiresIn: "1 hour",
     });
-    res.json({ token });
+    res.status(200).json({ token });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Internal server error" });
@@ -156,10 +186,15 @@ const login = async (req, res) => {
 const getData = async (req, res) => {
   try {
     const user = req.user;
+
+    // check if user is verified
     if (!user.is_verified) {
-      res.status(400).json({ error: "User is not verified" });
+      return res.status(400).json({ error: "User is not verified" });
     }
+
     const { email, location, age, work } = user;
+
+    // return the data of the user
     const userData = { email: email, location: location, age: age, work: work };
     res.status(200).json({ data: userData });
   } catch (error) {

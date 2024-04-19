@@ -21,7 +21,7 @@ async function sendOTPEmail(email, otp) {
       html: `<p>OTP to verify your account is ${otp}</p>`,
     });
   } catch (error) {
-    console.error("Error sending OTP:", error);
+    // console.error("Error sending OTP:", error);
     throw new Error("Failed to send OTP");
   }
 }

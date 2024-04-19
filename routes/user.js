@@ -9,6 +9,8 @@ const {
   getData,
 } = require("../controller/user");
 
+// defining routes for user
+
 router.post("/register", register);
 
 router.post("/verify", verify);
