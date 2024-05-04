@@ -1,4 +1,4 @@
-# Monter Backend Assignment
+# OTP VERIFACTION API
 
 Created an API to register user, verify user using OTP sent on mail, update user data after verification, login user and to reutrn data of verified user after login.
 
